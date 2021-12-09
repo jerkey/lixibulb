@@ -16,7 +16,9 @@ const int ledPhase[NUM_LEDS] = { 0, ( 256 / 5 ) * 1,
 int ledPWMval[6] = { 0, 0, 0, 0, 0, 0 }; // stores the last analogWrite() value for each LED
                                          // so we don't analogWrite unnecessarily!
 
-unsigned long time, timeDisplay = 0;
+uint32_t time, timeDisplay = 0; // present time and when we last incremented phase
+uint32_t lastPhaseStep = 0; // when we last incremented phase
+uint32_t phaseStepInterval = 1000; // how many milliseconds per phase step
 
 /*void doKnob(){ // look in calcWatts() to see if this is commented out
   knobAdc = analogRead(KNOBPIN) - 10; // make sure not to add if knob is off
@@ -36,12 +38,19 @@ void setup() {
   setPwmFrequency(6,1); // this sets the frequency of PWM on pins 5 and 6 to 62,500 Hz
   setPwmFrequency(9,1); // this sets the frequency of PWM on pins 9 and 10 to 31,250 Hz
 
-  timeDisplay = millis();
+  timeDisplay = millis() / 64;
 }
 
 void loop() {
-  time = millis();
-  doLeds();
+  static uint8_t phase = 0; // this is what we rotate through 0 - 255 to cycle the sinewave
+  time = millis() / 64;
+
+  if ( time - lastPhaseStep > phaseStepInterval ) {
+    phase = ( phase + 1 ) % sinewave_length ;
+    lastPhaseStep = time;
+  }
+
+  doLeds(phase);
 
   if(time - timeDisplay > DISPLAY_INTERVAL){
     Serial.println(time);
@@ -50,13 +59,13 @@ void loop() {
 
 }
 
-void doLeds() {
-  static uint8_t phase = 0; // how far through the sinewave table is the first LED
+void doLeds(uint8_t phase) { // phase is 0 - 255
   for(uint8_t which_led = 0; which_led < NUM_LEDS; which_led++) {
     uint8_t pwmVal = sinewave_data[ ( phase + ledPhase[ which_led ] ) % sinewave_length ]; // what's our desired LED brightness value
+    if ( which_led == 0 ) Serial.println( sinewave_data [ phase ] ); // DEBUG
     if ( pwmVal != ledPWMval[ which_led ] ) {
       analogWrite( ledPins[ which_led ], pwmVal );
-      ledPWMval = pwmVal;
+      ledPWMval[ which_led ] = pwmVal;
     }
   }
 }
