@@ -1,3 +1,4 @@
+# written by alex
 # if you need to pad the zeros consider this
 # http://stackoverflow.com/questions/12638408/decorating-hex-function-to-pad-zeros
 import math
